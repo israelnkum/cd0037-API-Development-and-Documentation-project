@@ -11,7 +11,7 @@ class QuestionView extends Component {
       questions: [],
       page: 1,
       totalQuestions: 0,
-      categories: {},
+      categories: [],
       currentCategory: null,
     };
   }
@@ -31,15 +31,16 @@ class QuestionView extends Component {
           categories: result.categories,
           currentCategory: result.current_category,
         });
-        return;
       },
       error: (error) => {
         alert('Unable to load questions. Please try your request again');
-        return;
       },
     });
   };
 
+  findCategory (categoryId){
+   return  this.state.categories.find((category) => category.id === categoryId)
+  }
   selectPage(num) {
     this.setState({ page: num }, () => this.getQuestions());
   }
@@ -84,7 +85,7 @@ class QuestionView extends Component {
 
   submitSearch = (searchTerm) => {
     $.ajax({
-      url: `/questions`, //TODO: update request URL
+      url: `/questions/search`,
       type: 'POST',
       dataType: 'json',
       contentType: 'application/json',
@@ -119,7 +120,6 @@ class QuestionView extends Component {
           },
           error: (error) => {
             alert('Unable to load questions. Please try your request again');
-            return;
           },
         });
       }
@@ -138,18 +138,16 @@ class QuestionView extends Component {
             Categories
           </h2>
           <ul>
-            {Object.keys(this.state.categories).map((id) => (
-              <li
-                key={id}
+            {this.state.categories.map(({id, type}) => (
+              <li key={id}
                 onClick={() => {
                   this.getByCategory(id);
-                }}
-              >
-                {this.state.categories[id]}
+                }}>
+                {type}
                 <img
                   className='category'
-                  alt={`${this.state.categories[id].toLowerCase()}`}
-                  src={`${this.state.categories[id].toLowerCase()}.svg`}
+                  alt={`${type.toLowerCase()}`}
+                  src={`${type.toLowerCase()}.svg`}
                 />
               </li>
             ))}
@@ -159,14 +157,14 @@ class QuestionView extends Component {
         <div className='questions-list'>
           <h2>Questions</h2>
           {this.state.questions.map((q, ind) => (
-            <Question
-              key={q.id}
-              question={q.question}
-              answer={q.answer}
-              category={this.state.categories[q.category]}
-              difficulty={q.difficulty}
-              questionAction={this.questionAction(q.id)}
-            />
+              <Question
+                  key={q.id}
+                  question={q.question}
+                  answer={q.answer}
+                  category={this.findCategory(q.category).type}
+                  difficulty={q.difficulty}
+                  questionAction={this.questionAction(q.id)}
+              />
           ))}
           <div className='pagination-menu'>{this.createPagination()}</div>
         </div>
