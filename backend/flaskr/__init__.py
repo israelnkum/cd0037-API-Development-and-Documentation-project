@@ -53,7 +53,9 @@ def create_app(test_config=None):
         if category_id == 0:
             selection = Question.query.order_by(Question.id).all()
         else:
-            selection = Question.query.filter(Question.category == category_id).order_by(Question.id).all()
+            selection = \
+                Question.query.filter(Question.category == category_id) \
+                .order_by(Question.id).all()
 
         all_questions = paginate_questions(request, selection)
 
@@ -73,14 +75,15 @@ def create_app(test_config=None):
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
         try:
-            question = Question.query.filter(Question.id == question_id).one_or_none()
+            question = \
+                Question.query.filter(Question.id == question_id).one_or_none()
 
             if question is None:
                 abort(422)
 
             question.delete()
             return get_questions()
-        except:
+        except Exception as ex:
             abort(422)
 
     @app.route("/questions", methods=["POST"])
@@ -93,7 +96,10 @@ def create_app(test_config=None):
             category = body.get("category")
             difficulty = body.get("difficulty")
 
-            if not ('question' in body and 'answer' in body and 'difficulty' in body and 'category' in body):
+            if not ('question' in body
+                    and 'answer' in body
+                    and 'difficulty' in body
+                    and 'category' in body):
                 abort(422)
             question = Question(question=question,
                                 answer=answer,
@@ -108,14 +114,20 @@ def create_app(test_config=None):
                 }
             )
 
-        except:
+        except Exception as ex:
             abort(422)
 
     @app.route('/questions/search', methods=['POST'])
     def search_question():
         body = request.get_json()
         search_term = body.get("searchTerm", None)
-        results = Question.query.filter(Question.question.ilike("%" + search_term + "%")).all()
+
+        if not search_term:
+            abort(404)
+        results = Question.query\
+            .filter(Question.question.ilike("%" + search_term + "%"))\
+            .all()
+
         all_questions = paginate_questions(request, results)
 
         return jsonify(
@@ -129,6 +141,9 @@ def create_app(test_config=None):
 
     @app.route('/categories/<int:category_id>/questions', methods=['GET'])
     def get_category_questions(category_id):
+        category = Category.query.filter(Category.id == category_id)
+        if category is None:
+            abort(400)
         return get_questions(category_id)
 
     @app.route('/quizzes', methods=['POST'])
@@ -138,11 +153,17 @@ def create_app(test_config=None):
             body = request.get_json()
             if not ('quiz_category' in body and 'previous_questions' in body):
                 abort(422)
-
             category = body.get('quiz_category', None)
             previous_questions = body.get('previous_questions', None)
-            available_questions = Question.query.filter_by(
-                category=category['id']).filter(Question.id.notin_(previous_questions)).all()
+
+            if category['id'] == 0:
+                available_questions = Question.query.filter(
+                    Question.id.notin_(previous_questions)).all()
+            else:
+                available_questions = Question.query.filter_by(
+                    category=category['id'])\
+                    .filter(Question.id.notin_(previous_questions))\
+                    .all()
 
             if len(available_questions) > 0:
                 random_id = random.randrange(0, len(available_questions))
@@ -161,7 +182,7 @@ def create_app(test_config=None):
                     'quiz_category': category['type']
                 })
 
-        except:
+        except Exception as ex:
             abort(422)
 
     @app.errorhandler(404)
@@ -195,5 +216,13 @@ def create_app(test_config=None):
             "error": 400,
             "message": "bad request"
         }), 400
+
+    @app.errorhandler(500)
+    def server_error(error):
+        return jsonify({
+            "success": False,
+            "error": 500,
+            "message": "server error"
+        }), 500
 
     return app
