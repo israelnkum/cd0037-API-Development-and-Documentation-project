@@ -157,8 +157,7 @@ def create_app(test_config=None):
             previous_questions = body.get('previous_questions', None)
 
             if category['id'] == 0:
-                available_questions = Question.query.filter(
-                    Question.id.notin_(previous_questions)).all()
+                available_questions = Question.query.all()
             else:
                 available_questions = Question.query.filter_by(
                     category=category['id'])\
